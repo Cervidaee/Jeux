@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des jeux - Événement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .collab-badge {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .collab-badge span {
+            background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+            margin-bottom: 20px;
+        }
+
+        .export-btn:hover {
+            box-shadow: 0 5px 15px rgba(38, 222, 129, 0.4);
+        }
+
+        .games-list {
+            margin-top: 20px;
+        }
+
+        .game-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            transition: all 0.3s;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .game-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .game-info {
+            flex: 1;
+        }
+
+        .game-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .game-owner {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .count {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .success-message {
+            background: #26de81;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .error-message {
+            background: #fc5c65;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Liste des jeux</h1>
+        <p class="subtitle">Ajoutez les jeux que vous amenez à l'événement</p>
+        <div class="collab-badge">
+            <span>
+                <div class="sync-indicator"></div>
+                Liste collaborative • Tout le monde voit les mêmes jeux
+            </span>
+        </div>
+
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="form-section">
+            <div class="input-group">
+                <label for="playerName">Votre nom</label>
+                <input type="text" id="playerName" placeholder="Ex: Mathieu">
+            </div>
+            <div class="input-group">
+                <label for="gameName">Nom du jeu</label>
+                <input type="text" id="gameName" placeholder="Ex: Catan, Dixit, Risk...">
+            </div>
+            <button id="addButton" onclick="addGame()">➕ Ajouter le jeu</button>
+        </div>
+
+        <button class="export-btn" onclick="exportToCSV()">📥 Télécharger la liste CSV</button>
+
+        <div class="count" id="gameCount">Chargement...</div>
+
+        <div class="games-list" id="gamesList">
+            <div class="loading">Chargement de la liste</div>
+        </div>
+    </div>
+
+    <script>
+        let games = [];
+        const STORAGE_KEY = 'shared-games-list';
+
+        // Charger les jeux au démarrage
+        loadGames();
+
+        // Rafraîchir automatiquement toutes les 3 secondes
+        setInterval(loadGames, 3000);
+
+        async function loadGames() {
+            try {
+                const result = await window.storage.get(STORAGE_KEY, true);
+                
+                if (result && result.value) {
+                    games = JSON.parse(result.value);
+                } else {
+                    games = [];
+                }
+                
+                displayGames();
+            } catch (error) {
+                console.log('Première initialisation de la liste');
+                games = [];
+                displayGames();
+            }
+        }
+
+        async function saveGames() {
+            try {
+                await window.storage.set(STORAGE_KEY, JSON.stringify(games), true);
+                return true;
+            } catch (error) {
+                console.error('Erreur de sauvegarde:', error);
+                showErrorMessage('Erreur lors de la sauvegarde. Réessayez.');
+                return false;
+            }
+        }
+
+        async function addGame() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const gameName = document.getElementById('gameName').value.trim();
+            const addButton = document.getElementById('addButton');
+
+            if (!playerName || !gameName) {
+                showErrorMessage('Veuillez remplir votre nom et le nom du jeu');
+                return;
+            }
+
+            // Désactiver le bouton pendant l'ajout
+            addButton.disabled = true;
+            addButton.textContent = 'Ajout en cours...';
+
+            // Recharger pour avoir la dernière version
+            await loadGames();
+
+            // Ajouter le nouveau jeu
+            const now = new Date();
+            games.push({
+                id: Date.now() + Math.random(), // ID unique
+                player: playerName,
+                game: gameName,
+                dateAdded: now.toISOString()
+            });
+
+            // Sauvegarder
+            const success = await saveGames();
+
+            if (success) {
+                // Réinitialiser le champ du jeu seulement
+                document.getElementById('gameName').value = '';
+                document.getElementById('gameName').focus();
+
+                // Recharger pour afficher les changements
+                await loadGames();
+
+                showSuccessMessage('Jeu ajouté avec succès !');
+            }
+
+            // Réactiver le bouton
+            addButton.disabled = false;
+            addButton.textContent = '➕ Ajouter le jeu';
+        }
+
+        function displayGames() {
+            const gamesList = document.getElementById('gamesList');
+            const gameCount = document.getElementById('gameCount');
+
+            gameCount.textContent = `${games.length} jeu(x) au total`;
+
+            if (games.length === 0) {
+                gamesList.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <p>Aucun jeu ajouté pour le moment</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Soyez le premier à ajouter un jeu !</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Trier par date d'ajout (plus récent en haut)
+            const sortedGames = [...games].sort((a, b) => 
+                new Date(b.dateAdded) - new Date(a.dateAdded)
+            );
+
+            gamesList.innerHTML = sortedGames.map(game => `
+                <div class="game-item">
+                    <div class="game-info">
+                        <div class="game-name">${escapeHtml(game.game)}</div>
+                        <div class="game-owner">Amené par ${escapeHtml(game.player)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function exportToCSV() {
+            if (games.length === 0) {
+                showErrorMessage('Aucun jeu à exporter !');
+                return;
+            }
+
+            // Créer l'en-tête CSV avec BOM pour Excel
+            let csv = '\ufeffNom du jeu,Apporté par,Date d\'ajout\n';
+
+            // Trier par ordre alphabétique du nom du jeu
+            const sortedGames = [...games].sort((a, b) => 
+                a.game.localeCompare(b.game, 'fr')
+            );
+
+            // Ajouter chaque jeu
+            sortedGames.forEach(game => {
+                const date = new Date(game.dateAdded).toLocaleString('fr-FR');
+                // Échapper les guillemets et virgules
+                const gameName = `"${game.game.replace(/"/g, '""')}"`;
+                const playerName = `"${game.player.replace(/"/g, '""')}"`;
+                csv += `${gameName},${playerName},${date}\n`;
+            });
+
+            // Créer un blob et le télécharger
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            const now = new Date();
+            const filename = `liste_jeux_evenement_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showSuccessMessage(`✅ CSV téléchargé : ${games.length} jeu(x)`);
+        }
+
+        function showSuccessMessage(message) {
+            const messageBox = document.getElementById('successMessage');
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 3000);
+        }
+
+        function showErrorMessage(message) {
+            const messageBox = document.getElementById('errorMessage');
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 4000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Permettre d'ajouter avec la touche Entrée
+        document.getElementById('gameName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addGame();
+            }
+        });
+
+        document.getElementById('playerName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('gameName').focus();
+            }
+        });
+    </script>
+</body>
+</html>
