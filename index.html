@@ -191,12 +191,6 @@
             color: #888;
         }
 
-        .game-date {
-            font-size: 12px;
-            color: #bbb;
-            margin-top: 3px;
-        }
-
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -343,14 +337,14 @@
                 
                 games = [];
                 
-                // Parcourir les lignes (en sautant l'en-tête)
+                // Parcourir les lignes (en sautant l'en-tête à l'index 0)
                 if (json.table.rows) {
-                    json.table.rows.forEach(row => {
-                        if (row.c && row.c[0] && row.c[0].v) {
+                    json.table.rows.forEach((row, index) => {
+                        // Ignorer la première ligne (index 0) qui contient les en-têtes
+                        if (index > 0 && row.c && row.c[0] && row.c[0].v) {
                             games.push({
                                 game: row.c[0].v || '',
-                                player: row.c[1] ? row.c[1].v : '',
-                                date: row.c[2] ? row.c[2].v : ''
+                                player: row.c[1] ? row.c[1].v : ''
                             });
                         }
                     });
@@ -413,7 +407,6 @@
                     <div class="game-info">
                         <div class="game-name">${escapeHtml(game.game)}</div>
                         <div class="game-owner">Amené par ${escapeHtml(game.player)}</div>
-                        ${game.date ? `<div class="game-date">${escapeHtml(game.date)}</div>` : ''}
                     </div>
                 </div>
             `).join('');
