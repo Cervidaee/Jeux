@@ -279,19 +279,9 @@
     <div class="container">
         <h1>🎮 Liste des jeux</h1>
         <p class="subtitle">Ajoutez les jeux que vous amenez à l'événement</p>
-        <div class="collab-badge">
-            <span>
-                <div class="sync-indicator"></div>
-                Liste collaborative • Ajout automatique en temps réel
-            </span>
-        </div>
 
         <div id="successMessage" class="success-message"></div>
         <div id="errorMessage" class="error-message"></div>
-
-        <div class="info-box">
-            💡 <strong>Comment ça marche :</strong> Ajoutez votre jeu ci-dessous, il apparaîtra automatiquement dans la liste pour tout le monde !
-        </div>
 
         <div class="form-section">
             <div class="input-group">
@@ -327,6 +317,12 @@
 
         // Charger les jeux au démarrage
         loadGames();
+        
+        // Charger le nom sauvegardé
+        const savedName = localStorage.getItem('playerName');
+        if (savedName) {
+            document.getElementById('playerName').value = savedName;
+        }
 
         async function loadGames() {
             try {
@@ -385,9 +381,12 @@
                 });
 
                 // Avec no-cors, on ne peut pas lire la réponse, mais si on arrive ici, c'est probablement réussi
-                // Réinitialiser le champ du jeu seulement
+                
+                // Sauvegarder le nom pour la prochaine fois
+                localStorage.setItem('playerName', playerName);
+                
+                // Réinitialiser le champ du jeu seulement (garder le nom)
                 document.getElementById('gameName').value = '';
-                document.getElementById('playerName').value = '';
                 document.getElementById('gameName').focus();
 
                 showSuccessMessage('✅ Jeu ajouté avec succès !');
