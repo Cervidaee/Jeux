@@ -130,13 +130,19 @@
             transform: none;
         }
 
-        .export-btn {
-            background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+        .action-buttons {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
         }
 
-        .export-btn:hover {
-            box-shadow: 0 5px 15px rgba(38, 222, 129, 0.4);
+        .refresh-btn, .sheet-btn {
+            background: linear-gradient(135deg, #45aaf2 0%, #2d98da 100%);
+            flex: 1;
+        }
+
+        .refresh-btn:hover, .sheet-btn:hover {
+            box-shadow: 0 5px 15px rgba(69, 170, 242, 0.4);
         }
 
         .games-list {
@@ -183,6 +189,12 @@
         .game-owner {
             font-size: 14px;
             color: #888;
+        }
+
+        .game-date {
+            font-size: 12px;
+            color: #bbb;
+            margin-top: 3px;
         }
 
         .empty-state {
@@ -257,6 +269,16 @@
                 transform: translateY(0);
             }
         }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #1976d2;
+        }
     </style>
 </head>
 <body>
@@ -266,12 +288,16 @@
         <div class="collab-badge">
             <span>
                 <div class="sync-indicator"></div>
-                Liste collaborative • Tout le monde voit les mêmes jeux
+                Liste collaborative • Synchronisé avec Google Sheets
             </span>
         </div>
 
         <div id="successMessage" class="success-message"></div>
         <div id="errorMessage" class="error-message"></div>
+
+        <div class="info-box">
+            💡 <strong>Astuce :</strong> Les jeux sont affichés en temps réel depuis Google Sheets. Cliquez sur "Actualiser" pour voir les nouveaux ajouts, ou ajoutez directement dans le Google Sheet !
+        </div>
 
         <div class="form-section">
             <div class="input-group">
@@ -282,10 +308,13 @@
                 <label for="gameName">Nom du jeu</label>
                 <input type="text" id="gameName" placeholder="Ex: Catan, Dixit, Risk...">
             </div>
-            <button id="addButton" onclick="addGame()">➕ Ajouter le jeu</button>
+            <button id="addButton" onclick="addGameToSheet()">➕ Ajouter dans le Google Sheet</button>
         </div>
 
-        <button class="export-btn" onclick="exportToCSV()">📥 Télécharger la liste CSV</button>
+        <div class="action-buttons">
+            <button class="refresh-btn" onclick="loadGames()">🔄 Actualiser la liste</button>
+            <button class="sheet-btn" onclick="openSheet()">📊 Ouvrir Google Sheet</button>
+        </div>
 
         <div class="count" id="gameCount">Chargement...</div>
 
@@ -295,87 +324,68 @@
     </div>
 
     <script>
+        // ID de votre Google Sheet
+        const SHEET_ID = '1TcCE9Z5m4nmDfbdLV5dJ59YvPhi8mMgbt9xjhny-duU';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+        
         let games = [];
-        const STORAGE_KEY = 'shared-games-list';
 
         // Charger les jeux au démarrage
         loadGames();
 
-        // Rafraîchir automatiquement toutes les 3 secondes
-        setInterval(loadGames, 3000);
-
         async function loadGames() {
             try {
-                const result = await window.storage.get(STORAGE_KEY, true);
+                const response = await fetch(SHEET_URL);
+                const text = await response.text();
                 
-                if (result && result.value) {
-                    games = JSON.parse(result.value);
-                } else {
-                    games = [];
+                // Google Sheets retourne du JSONP, on doit extraire le JSON
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                
+                games = [];
+                
+                // Parcourir les lignes (en sautant l'en-tête)
+                if (json.table.rows) {
+                    json.table.rows.forEach(row => {
+                        if (row.c && row.c[0] && row.c[0].v) {
+                            games.push({
+                                game: row.c[0].v || '',
+                                player: row.c[1] ? row.c[1].v : '',
+                                date: row.c[2] ? row.c[2].v : ''
+                            });
+                        }
+                    });
                 }
                 
                 displayGames();
+                showSuccessMessage('✅ Liste actualisée !');
             } catch (error) {
-                console.log('Première initialisation de la liste');
-                games = [];
+                console.error('Erreur de chargement:', error);
+                showErrorMessage('Impossible de charger la liste. Vérifiez que le Google Sheet est partagé en "Éditeur".');
                 displayGames();
             }
         }
 
-        async function saveGames() {
-            try {
-                await window.storage.set(STORAGE_KEY, JSON.stringify(games), true);
-                return true;
-            } catch (error) {
-                console.error('Erreur de sauvegarde:', error);
-                showErrorMessage('Erreur lors de la sauvegarde. Réessayez.');
-                return false;
-            }
-        }
-
-        async function addGame() {
+        function addGameToSheet() {
             const playerName = document.getElementById('playerName').value.trim();
             const gameName = document.getElementById('gameName').value.trim();
-            const addButton = document.getElementById('addButton');
 
             if (!playerName || !gameName) {
                 showErrorMessage('Veuillez remplir votre nom et le nom du jeu');
                 return;
             }
 
-            // Désactiver le bouton pendant l'ajout
-            addButton.disabled = true;
-            addButton.textContent = 'Ajout en cours...';
+            // Ouvrir le Google Sheet directement
+            const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
+            
+            showSuccessMessage(`📝 Ouvrez le Google Sheet et ajoutez : "${gameName}" par "${playerName}"`);
+            
+            setTimeout(() => {
+                window.open(sheetUrl, '_blank');
+            }, 500);
 
-            // Recharger pour avoir la dernière version
-            await loadGames();
-
-            // Ajouter le nouveau jeu
-            const now = new Date();
-            games.push({
-                id: Date.now() + Math.random(), // ID unique
-                player: playerName,
-                game: gameName,
-                dateAdded: now.toISOString()
-            });
-
-            // Sauvegarder
-            const success = await saveGames();
-
-            if (success) {
-                // Réinitialiser le champ du jeu seulement
-                document.getElementById('gameName').value = '';
-                document.getElementById('gameName').focus();
-
-                // Recharger pour afficher les changements
-                await loadGames();
-
-                showSuccessMessage('Jeu ajouté avec succès !');
-            }
-
-            // Réactiver le bouton
-            addButton.disabled = false;
-            addButton.textContent = '➕ Ajouter le jeu';
+            // Réinitialiser les champs
+            document.getElementById('gameName').value = '';
+            document.getElementById('playerName').value = '';
         }
 
         function displayGames() {
@@ -391,66 +401,26 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                         </svg>
                         <p>Aucun jeu ajouté pour le moment</p>
-                        <p style="font-size: 14px; margin-top: 10px;">Soyez le premier à ajouter un jeu !</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Cliquez sur "Ouvrir Google Sheet" pour ajouter des jeux !</p>
                     </div>
                 `;
                 return;
             }
 
-            // Trier par date d'ajout (plus récent en haut)
-            const sortedGames = [...games].sort((a, b) => 
-                new Date(b.dateAdded) - new Date(a.dateAdded)
-            );
-
-            gamesList.innerHTML = sortedGames.map(game => `
+            // Afficher les jeux dans l'ordre du Sheet
+            gamesList.innerHTML = games.map(game => `
                 <div class="game-item">
                     <div class="game-info">
                         <div class="game-name">${escapeHtml(game.game)}</div>
                         <div class="game-owner">Amené par ${escapeHtml(game.player)}</div>
+                        ${game.date ? `<div class="game-date">${escapeHtml(game.date)}</div>` : ''}
                     </div>
                 </div>
             `).join('');
         }
 
-        function exportToCSV() {
-            if (games.length === 0) {
-                showErrorMessage('Aucun jeu à exporter !');
-                return;
-            }
-
-            // Créer l'en-tête CSV avec BOM pour Excel
-            let csv = '\ufeffNom du jeu,Apporté par,Date d\'ajout\n';
-
-            // Trier par ordre alphabétique du nom du jeu
-            const sortedGames = [...games].sort((a, b) => 
-                a.game.localeCompare(b.game, 'fr')
-            );
-
-            // Ajouter chaque jeu
-            sortedGames.forEach(game => {
-                const date = new Date(game.dateAdded).toLocaleString('fr-FR');
-                // Échapper les guillemets et virgules
-                const gameName = `"${game.game.replace(/"/g, '""')}"`;
-                const playerName = `"${game.player.replace(/"/g, '""')}"`;
-                csv += `${gameName},${playerName},${date}\n`;
-            });
-
-            // Créer un blob et le télécharger
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            
-            const now = new Date();
-            const filename = `liste_jeux_evenement_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.csv`;
-            
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            showSuccessMessage(`✅ CSV téléchargé : ${games.length} jeu(x)`);
+        function openSheet() {
+            window.open(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`, '_blank');
         }
 
         function showSuccessMessage(message) {
@@ -470,7 +440,7 @@
             
             setTimeout(() => {
                 messageBox.style.display = 'none';
-            }, 4000);
+            }, 5000);
         }
 
         function escapeHtml(text) {
@@ -482,7 +452,7 @@
         // Permettre d'ajouter avec la touche Entrée
         document.getElementById('gameName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                addGame();
+                addGameToSheet();
             }
         });
 
@@ -491,6 +461,9 @@
                 document.getElementById('gameName').focus();
             }
         });
+
+        // Auto-refresh toutes les 30 secondes
+        setInterval(loadGames, 30000);
     </script>
 </body>
 </html>
