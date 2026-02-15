@@ -282,7 +282,7 @@
         <div class="collab-badge">
             <span>
                 <div class="sync-indicator"></div>
-                Liste collaborative • Synchronisé avec Google Sheets
+                Liste collaborative • Ajout automatique en temps réel
             </span>
         </div>
 
@@ -290,7 +290,7 @@
         <div id="errorMessage" class="error-message"></div>
 
         <div class="info-box">
-            💡 <strong>Astuce :</strong> Les jeux sont affichés en temps réel depuis Google Sheets. Cliquez sur "Actualiser" pour voir les nouveaux ajouts, ou ajoutez directement dans le Google Sheet !
+            💡 <strong>Comment ça marche :</strong> Ajoutez votre jeu ci-dessous, il apparaîtra automatiquement dans la liste pour tout le monde !
         </div>
 
         <div class="form-section">
@@ -302,12 +302,12 @@
                 <label for="gameName">Nom du jeu</label>
                 <input type="text" id="gameName" placeholder="Ex: Catan, Dixit, Risk...">
             </div>
-            <button id="addButton" onclick="addGameToSheet()">➕ Ajouter dans le Google Sheet</button>
+            <button id="addButton" onclick="addGame()">➕ Ajouter le jeu</button>
         </div>
 
         <div class="action-buttons">
-            <button class="refresh-btn" onclick="loadGames()">🔄 Actualiser la liste</button>
-            <button class="sheet-btn" onclick="openSheet()">📊 Ouvrir Google Sheet</button>
+            <button class="refresh-btn" onclick="loadGames()">🔄 Actualiser</button>
+            <button class="sheet-btn" onclick="openSheet()">📊 Voir Google Sheet</button>
         </div>
 
         <div class="count" id="gameCount">Chargement...</div>
@@ -318,8 +318,9 @@
     </div>
 
     <script>
-        // ID de votre Google Sheet
+        // Configuration
         const SHEET_ID = '1TcCE9Z5m4nmDfbdLV5dJ59YvPhi8mMgbt9xjhny-duU';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby74XVBV9qqHtkMOQU75OW2eJ1ysez-p-QNT-ZXoAtXohWHZWVrikA8LixSea8uoQ4n/exec';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
         
         let games = [];
@@ -351,35 +352,57 @@
                 }
                 
                 displayGames();
-                showSuccessMessage('✅ Liste actualisée !');
             } catch (error) {
                 console.error('Erreur de chargement:', error);
-                showErrorMessage('Impossible de charger la liste. Vérifiez que le Google Sheet est partagé en "Éditeur".');
+                showErrorMessage('Impossible de charger la liste. Vérifiez que le Google Sheet est partagé.');
                 displayGames();
             }
         }
 
-        function addGameToSheet() {
+        async function addGame() {
             const playerName = document.getElementById('playerName').value.trim();
             const gameName = document.getElementById('gameName').value.trim();
+            const addButton = document.getElementById('addButton');
 
             if (!playerName || !gameName) {
                 showErrorMessage('Veuillez remplir votre nom et le nom du jeu');
                 return;
             }
 
-            // Ouvrir le Google Sheet directement
-            const sheetUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
-            
-            showSuccessMessage(`📝 Ouvrez le Google Sheet et ajoutez : "${gameName}" par "${playerName}"`);
-            
-            setTimeout(() => {
-                window.open(sheetUrl, '_blank');
-            }, 500);
+            // Désactiver le bouton pendant l'ajout
+            addButton.disabled = true;
+            addButton.textContent = 'Ajout en cours...';
 
-            // Réinitialiser les champs
-            document.getElementById('gameName').value = '';
-            document.getElementById('playerName').value = '';
+            try {
+                const formData = new URLSearchParams();
+                formData.append('game', gameName);
+                formData.append('player', playerName);
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'no-cors' // Important pour Google Apps Script
+                });
+
+                // Avec no-cors, on ne peut pas lire la réponse, mais si on arrive ici, c'est probablement réussi
+                // Réinitialiser le champ du jeu seulement
+                document.getElementById('gameName').value = '';
+                document.getElementById('playerName').value = '';
+                document.getElementById('gameName').focus();
+
+                showSuccessMessage('✅ Jeu ajouté avec succès !');
+                
+                // Recharger après 2 secondes pour voir le nouveau jeu
+                setTimeout(() => loadGames(), 2000);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                showErrorMessage('Erreur lors de l\'ajout. Réessayez.');
+            } finally {
+                // Réactiver le bouton
+                addButton.disabled = false;
+                addButton.textContent = '➕ Ajouter le jeu';
+            }
         }
 
         function displayGames() {
@@ -395,7 +418,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                         </svg>
                         <p>Aucun jeu ajouté pour le moment</p>
-                        <p style="font-size: 14px; margin-top: 10px;">Cliquez sur "Ouvrir Google Sheet" pour ajouter des jeux !</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Soyez le premier à ajouter un jeu !</p>
                     </div>
                 `;
                 return;
@@ -445,7 +468,7 @@
         // Permettre d'ajouter avec la touche Entrée
         document.getElementById('gameName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                addGameToSheet();
+                addGame();
             }
         });
 
@@ -455,8 +478,8 @@
             }
         });
 
-        // Auto-refresh toutes les 30 secondes
-        setInterval(loadGames, 30000);
+        // Auto-refresh toutes les 15 secondes
+        setInterval(loadGames, 15000);
     </script>
 </body>
 </html>
